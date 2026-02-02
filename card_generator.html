@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contractor Skill Card System</title>
+    
+    <!-- 1. Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. React & ReactDOM (UMD) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 3. Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @media print {
+            @page { 
+                size: A4 portrait; 
+                margin: 0; 
+            }
+            body { 
+                background: white; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            }
+            body * { visibility: hidden; }
+            
+            .print-single-mode #card-element, .print-single-mode #card-element * { 
+                visibility: visible; 
+            }
+            .print-single-mode #card-element {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%) !important;
+                margin: 0;
+                border: 1px solid #ddd;
+                visibility: visible;
+                page-break-after: always;
+            }
+
+            .print-batch-mode #batch-print-container, .print-batch-mode #batch-print-container * {
+                visibility: visible;
+            }
+            .print-batch-mode #batch-print-container {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                padding: 10mm;
+                visibility: visible;
+                display: block !important;
+            }
+            
+            .a4-page {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(4, 1fr);
+                column-gap: 10px;
+                row-gap: 20px;
+                width: 190mm; 
+                height: 270mm;
+                page-break-after: always;
+            }
+            .card-in-batch {
+                transform: scale(1);
+                border: 1px dashed #ccc;
+                margin: auto;
+                page-break-inside: avoid;
+            }
+        }
+        
+        #error-display { display: none; padding: 20px; background: #fee2e2; color: #991b1b; border: 1px solid #f87171; margin: 20px; border-radius: 8px; font-family: sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <div id="error-display"></div>
+    <div id="root"></div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorDiv = document.getElementById('error-display');
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML = `<strong>เกิดข้อผิดพลาด (System Error):</strong><br>${message}<br><small>Line: ${lineno}</small><br>กรุณาตรวจสอบอินเทอร์เน็ต หรือลองรีเฟรชหน้าจอ`;
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+
+        // --- ICONS ---
+        const IconBase = ({ children, size = 14, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const Icons = {
+            User: (props) => <IconBase {...props} size={20}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>,
+            Printer: (props) => <IconBase {...props} size={16}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></IconBase>,
+            Save: (props) => <IconBase {...props} size={16}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></IconBase>,
+            Refresh: (props) => <IconBase {...props} size={16}><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></IconBase>,
+            Layers: (props) => <IconBase {...props} size={16}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></IconBase>,
+            Database: (props) => <IconBase {...props} size={24}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></IconBase>,
+            Download: (props) => <IconBase {...props} size={14}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconBase>,
+            Search: (props) => <IconBase {...props} size={14}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></IconBase>,
+            Trash: (props) => <IconBase {...props} size={14}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconBase>,
+            Edit: (props) => <IconBase {...props} size={14}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconBase>,
+            AlertTriangle: (props) => <IconBase {...props} size={16}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></IconBase>,
+            WifiOff: (props) => <IconBase {...props} size={14}><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></IconBase>,
+            
+            // Skill Icons
+            Shield: (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></IconBase>,
+            Flame: (props) => <IconBase {...props}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.5-3.3.5 1.3 1.5 2.5 3 3.3z"/></IconBase>,
+            Zap: (props) => <IconBase {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconBase>,
+            HardHat: (props) => <IconBase {...props}><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v3"/><path d="M14 16c.8 0 1.6-.2 2.4-.6l1.6-.8L19 13v3h-5v0z"/><path d="M10 16c-.8 0-1.6-.2-2.4-.6l-1.6-.8L5 13v3h5v0z"/></IconBase>,
+            Construction: (props) => <IconBase {...props}><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14 2.3 6.3"/><path d="m14 6 7.7 7.7"/><path d="m8 6 8 8"/></IconBase>,
+            ArrowUp: (props) => <IconBase {...props}><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></IconBase>,
+            Anchor: (props) => <IconBase {...props}><circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></IconBase>,
+            FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></IconBase>,
+            Radio: (props) => <IconBase {...props}><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></IconBase>,
+            Truck: (props) => <IconBase {...props}><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></IconBase>,
+            CheckSquare: (props) => <IconBase {...props} size={20}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></IconBase>,
+        };
+
+        const getSkillIcon = (id) => {
+            switch(id) {
+                case 'confine': return <Icons.Shield size={14}/>;
+                case 'firewatch': return <Icons.Flame size={14}/>;
+                case 'electrical': return <Icons.Zap size={14}/>;
+                case 'safety': return <Icons.HardHat size={14}/>;
+                case 'scaffold': return <Icons.Construction size={14}/>;
+                case 'height': return <Icons.ArrowUp size={14}/>;
+                case 'crane': return <Icons.Anchor size={14}/>;
+                case 'ptw': return <Icons.FileText size={14}/>;
+                case 'radiation': return <Icons.Radio size={14}/>;
+                case 'drive': return <Icons.Truck size={14}/>;
+                default: return <Icons.User size={14}/>;
+            }
+        };
+
+        const defaultLogo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%231e3a8a' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M30 70 L30 40 L50 20 L70 40 L70 70 Z' fill='%23fff'/%3E%3Cpath d='M40 70 L40 50 L60 50 L60 70' fill='%231e3a8a'/%3E%3Ctext x='50' y='90' font-family='Arial' font-size='10' fill='white' text-anchor='middle' font-weight='bold'%3ETANK FARM%3C/text%3E%3C/svg%3E";
+
+        const App = () => {
+            const today = new Date();
+            const nextYear = new Date(today);
+            nextYear.setFullYear(today.getFullYear() + 1);
+
+            const [contractorData, setContractorData] = useState({
+                fullName: '',
+                company: '',
+                idNumber: 'Insee-001', 
+                issueDate: today.toISOString().split('T')[0],
+                expiryDate: nextYear.toISOString().split('T')[0],
+            });
+            
+            const [logo, setLogo] = useState(() => {
+                const savedLogo = localStorage.getItem('custom_logo');
+                return savedLogo || defaultLogo;
+            });
+
+            const [savedContractors, setSavedContractors] = useState([]);
+            const [currentDocId, setCurrentDocId] = useState(null);
+            const [searchTerm, setSearchTerm] = useState('');
+            
+            const defaultSkills = [
+                { id: 'confine', label: 'Confined Space', active: false, expiry: '', hasSubRoles: true, subRoles: [
+                    { id: 'sup', label: 'ผู้ควบคุม (Sup)', active: false },
+                    { id: 'helper', label: 'ผู้ช่วยเหลือ (Helper)', active: false },
+                    { id: 'worker', label: 'ผู้ปฏิบัติงาน (Worker)', active: false },
+                    { id: 'observer', label: 'ผู้สังเกตการณ์ (Obs)', active: false },
+                ]},
+                { id: 'firewatch', label: 'Fire Watch', active: false, expiry: '', hasSubRoles: false },
+                { id: 'electrical', label: 'Electrical Tech', active: false, expiry: '', hasSubRoles: false },
+                { id: 'safety', label: 'Safety', active: false, expiry: '', hasSubRoles: true, subRoles: [
+                    { id: 'sup', label: 'Sup', active: false },
+                    { id: 'tech', label: 'Tech', active: false },
+                    { id: 'officer', label: 'Officer', active: false },
+                ]},
+                { id: 'scaffold', label: 'Scaffold', active: false, expiry: '', hasSubRoles: true, subRoles: [
+                    { id: 'install', label: 'Installation', active: false },
+                    { id: 'inspect', label: 'Inspector', active: false },
+                ]},
+                { id: 'height', label: 'Work at Height', active: false, expiry: '', hasSubRoles: false },
+                { id: 'crane', label: 'Crane', active: false, expiry: '', hasSubRoles: true, subRoles: [
+                    { id: 'rigger', label: 'Rigger', active: false },
+                    { id: 'signaler', label: 'Signaler', active: false },
+                    { id: 'opt', label: 'Operator (OPT)', active: false },
+                    { id: 'ct', label: 'Controller (CT)', active: false },
+                ]},
+                { id: 'ptw', label: 'PTW Holder', active: false, expiry: '', hasSubRoles: false },
+                { id: 'radiation', label: 'Radiation', active: false, expiry: '', hasSubRoles: false },
+                { id: 'drive', label: 'Driver', active: false, expiry: '', hasSubRoles: false }, // ลบช้อย Driver ออกแล้ว
+            ];
+
+            const [skills, setSkills] = useState(defaultSkills);
+
+            useEffect(() => {
+                const localData = localStorage.getItem('contractor_db');
+                if (localData) {
+                    try {
+                        const parsed = JSON.parse(localData);
+                        setSavedContractors(parsed);
+                    } catch (e) { console.error("Load Error", e); }
+                }
+            }, []);
+
+            const handleInputChange = (e) => setContractorData({ ...contractorData, [e.target.name]: e.target.value });
+            
+            const handleLogoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 2000000) { alert("ไฟล์ใหญ่เกินไป (ต้อง < 2MB)"); return; }
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setLogo(reader.result);
+                        try { localStorage.setItem('custom_logo', reader.result); } catch (err) {}
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const resetLogo = () => {
+                if(confirm("รีเซ็ตโลโก้?")) {
+                    setLogo(defaultLogo);
+                    localStorage.removeItem('custom_logo');
+                }
+            };
+
+            const toggleSkill = (id, isActive) => setSkills(skills.map(skill => skill.id === id ? { ...skill, active: isActive } : skill));
+            const updateSkillExpiry = (id, date) => setSkills(skills.map(skill => skill.id === id ? { ...skill, expiry: date } : skill));
+            const toggleSubRole = (skillId, subRoleId) => {
+                setSkills(skills.map(skill => {
+                    if (skill.id === skillId) {
+                        return { ...skill, active: true, subRoles: skill.subRoles.map(sub => sub.id === subRoleId ? { ...sub, active: !sub.active } : sub) };
+                    }
+                    return skill;
+                }));
+            };
+
+            const handlePrintSingle = () => {
+                document.body.classList.remove('print-batch-mode');
+                document.body.classList.add('print-single-mode');
+                setTimeout(() => window.print(), 100);
+            };
+
+            const handlePrintBatch = () => {
+                if (savedContractors.length === 0) { alert('ไม่มีข้อมูล'); return; }
+                document.body.classList.remove('print-single-mode');
+                document.body.classList.add('print-batch-mode');
+                setTimeout(() => window.print(), 100);
+            };
+
+            const handleSave = () => {
+                if (!contractorData.fullName) { alert("กรุณากรอกชื่อ"); return; }
+                const newRecord = {
+                     id: currentDocId || Date.now().toString(),
+                     contractorData, 
+                     skills, 
+                     logo,
+                     createdAt: new Date().toISOString()
+                };
+                
+                let updatedList;
+                if(currentDocId) {
+                    updatedList = savedContractors.map(item => item.id === currentDocId ? newRecord : item);
+                    alert("อัปเดตแล้ว!");
+                } else {
+                    updatedList = [newRecord, ...savedContractors];
+                    alert("บันทึกแล้ว!");
+                }
+                
+                setSavedContractors(updatedList);
+                localStorage.setItem('contractor_db', JSON.stringify(updatedList));
+                if(!currentDocId) handleNewForm();
+            };
+
+            const handleDelete = (id, e) => {
+                e.stopPropagation();
+                if(!confirm('ยืนยันลบ?')) return;
+                const updatedList = savedContractors.filter(item => item.id !== id);
+                setSavedContractors(updatedList);
+                localStorage.setItem('contractor_db', JSON.stringify(updatedList));
+                if(currentDocId === id) handleNewForm();
+            };
+
+            const downloadCSV = () => {
+                if (savedContractors.length === 0) { alert("ไม่มีข้อมูล"); return; }
+                const headers = ["ID", "Name", "Company", "Issue Date", "Expiry Date", "Skills"];
+                const rows = savedContractors.map(c => {
+                    const skillDetails = c.skills.filter(s => s.active).map(s => {
+                        let role = s.label;
+                        if(s.hasSubRoles) {
+                            const roles = s.subRoles.filter(sr => sr.active).map(sr => sr.label).join('/');
+                            if(roles) role += ` (${roles})`;
+                        }
+                        if(s.expiry) role += ` [Exp:${s.expiry}]`;
+                        return role;
+                    }).join(' | ');
+                    return [`"${c.contractorData.idNumber}"`, `"${c.contractorData.fullName}"`, `"${c.contractorData.company}"`, `"${c.contractorData.issueDate}"`, `"${c.contractorData.expiryDate}"`, `"${skillDetails}"`];
+                });
+                const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `contractors.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const handleLoad = (doc) => {
+                setContractorData({ ...doc.contractorData, expiryDate: doc.contractorData.expiryDate || '' });
+                const mergedSkills = defaultSkills.map(defSkill => {
+                    const savedSkill = doc.skills.find(s => s.id === defSkill.id);
+                    if (savedSkill) {
+                         const mergedSubRoles = defSkill.hasSubRoles 
+                            ? defSkill.subRoles.map(defSub => {
+                                const savedSub = savedSkill.subRoles?.find(s => s.id === defSub.id);
+                                return savedSub ? { ...defSub, active: savedSub.active } : defSub;
+                            }) : undefined;
+                        return { ...defSkill, active: savedSkill.active, expiry: savedSkill.expiry || '', subRoles: mergedSubRoles || defSkill.subRoles };
+                    }
+                    return defSkill;
+                });
+                setSkills(mergedSkills);
+                setLogo(doc.logo || logo);
+                setCurrentDocId(doc.id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+
+            const handleNewForm = () => {
+                let nextId = 'Insee-001';
+                if(savedContractors.length > 0) {
+                     const lastId = savedContractors[0].contractorData.idNumber;
+                     const parts = lastId.split('-');
+                     if(parts.length > 1 && !isNaN(parts[parts.length-1])) {
+                         const num = parseInt(parts[parts.length-1]) + 1;
+                         nextId = parts.slice(0, -1).join('-') + '-' + String(num).padStart(3, '0');
+                     }
+                }
+                const today = new Date();
+                const nextYear = new Date(today);
+                nextYear.setFullYear(today.getFullYear() + 1);
+                
+                setContractorData({ 
+                    fullName: '', company: '', idNumber: nextId, 
+                    issueDate: today.toISOString().split('T')[0], 
+                    expiryDate: nextYear.toISOString().split('T')[0] 
+                });
+                setSkills(defaultSkills);
+                setLogo(localStorage.getItem('custom_logo') || defaultLogo);
+                setCurrentDocId(null);
+            };
+
+            const filteredList = savedContractors.filter(c => 
+                c.contractorData.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.contractorData.idNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.contractorData.company.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            const chunkArray = (arr, size) => {
+                const chunks = [];
+                for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+                return chunks;
+            };
+            const batchPages = chunkArray(filteredList, 8);
+
+            return (
+                <div className="p-4 pb-20">
+                     <div className="max-w-6xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-center print:hidden gap-4">
+                        <div>
+                        <h1 className="text-2xl font-bold text-blue-900">Contractor Skill Card System</h1>
+                        <p className="text-gray-600 text-sm flex items-center gap-2">
+                             <span className="flex items-center text-green-600 gap-1 font-bold">● Offline Mode</span>
+                        </p>
+                        </div>
+                        <div className="flex gap-2 flex-wrap justify-end">
+                            <button onClick={handleNewForm} className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded shadow transition text-sm">
+                                <Icons.Refresh /> คนใหม่
+                            </button>
+                            <button onClick={handleSave} className={`flex items-center gap-2 px-3 py-2 rounded shadow transition text-sm text-white ${currentDocId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                                <Icons.Save /> {currentDocId ? 'บันทึกแก้ไข' : 'บันทึก'}
+                            </button>
+                            <button onClick={handlePrintSingle} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded shadow transition text-sm">
+                                <Icons.Printer /> พิมพ์ใบนี้
+                            </button>
+                            <button onClick={handlePrintBatch} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded shadow transition text-sm">
+                                <Icons.Layers /> พิมพ์ A4 (8 ใบ)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8">
+                        <div className="w-full lg:w-5/12 bg-white p-6 rounded-lg shadow-md print:hidden h-fit border-t-4 border-blue-600">
+                             <h2 className="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2 text-blue-900">
+                                <Icons.User /> 1. ข้อมูลผู้รับเหมา {currentDocId && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded ml-auto">Editing Mode</span>}
+                            </h2>
+                            <div className="space-y-3 mb-6">
+                                <div className="p-3 bg-blue-50 border border-blue-100 rounded mb-4 flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-white rounded-full border border-gray-200 p-1 flex-shrink-0">
+                                        <img src={logo} className="w-full h-full object-contain"/>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-xs font-bold text-blue-900">Logo (Auto-Saved)</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <label className="cursor-pointer text-[10px] bg-white border px-2 py-1 rounded hover:bg-gray-50 flex items-center gap-1">
+                                                <Icons.Edit size={10} /> เปลี่ยนรูป
+                                                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden"/>
+                                            </label>
+                                            <button onClick={resetLogo} className="text-[10px] text-gray-500 hover:text-red-500 underline">ค่าเริ่มต้น</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div><label className="text-xs font-medium text-gray-500">ชื่อ-นามสกุล</label><input type="text" name="fullName" value={contractorData.fullName} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"/></div>
+                                <div><label className="text-xs font-medium text-gray-500">บริษัท</label><input type="text" name="company" value={contractorData.company} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"/></div>
+                                <div><label className="text-xs font-medium text-gray-500">ID Number</label><input type="text" name="idNumber" value={contractorData.idNumber} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono text-blue-800 font-bold"/></div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div><label className="text-xs font-medium text-gray-500">วันที่ออกบัตร</label><input type="date" name="issueDate" value={contractorData.issueDate} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/></div>
+                                    <div><label className="text-xs font-medium text-gray-500">วันหมดอายุ</label><input type="date" name="expiryDate" value={contractorData.expiryDate} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/></div>
+                                </div>
+                            </div>
+                            
+                            <h2 className="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2 text-blue-900">
+                                <Icons.CheckSquare /> 2. ตรวจสอบ Skill & Exp. Date
+                            </h2>
+                            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                {skills.map((skill) => (
+                                <div key={skill.id} className={`border rounded p-3 transition-colors shadow-sm ${skill.active ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <input type="checkbox" checked={skill.active} onChange={(e) => toggleSkill(skill.id, e.target.checked)} className="w-5 h-5 accent-blue-600 rounded cursor-pointer"/>
+                                        <div className="flex items-center gap-2 font-bold text-gray-800"><span className="text-blue-600">{getSkillIcon(skill.id)}</span>{skill.label}</div>
+                                    </div>
+                                    <div><input type="date" value={skill.expiry} onChange={(e) => updateSkillExpiry(skill.id, e.target.value)} className={`text-xs border rounded p-1 ${!skill.active && 'opacity-50 bg-gray-100'}`} disabled={!skill.active}/></div>
+                                    </div>
+                                    {skill.hasSubRoles && skill.active && (
+                                    <div className="ml-7 grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 p-2 bg-white/50 rounded border border-blue-100/50">
+                                        {skill.subRoles.map(sub => (
+                                        <label key={sub.id} className="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" checked={sub.active} onChange={() => toggleSubRole(skill.id, sub.id)} className="w-4 h-4 accent-green-600 rounded"/>
+                                            <span className="text-xs text-gray-700">{sub.label}</span>
+                                        </label>
+                                        ))}
+                                    </div>
+                                    )}
+                                </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="w-full lg:w-7/12 flex flex-col items-center pt-5">
+                            <p className="mb-4 text-gray-500 print:hidden text-sm flex items-center gap-2"><Icons.AlertTriangle /> ตัวอย่างบัตร (Live Preview)</p>
+                            <CardTemplate data={contractorData} skills={skills} logo={logo} />
+                        </div>
+                    </div>
+                    
+                    <div className="max-w-6xl mx-auto mt-12 bg-white rounded-lg shadow-lg overflow-hidden print:hidden border-t-4 border-gray-700">
+                        <div className="p-4 bg-gray-50 border-b flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="flex items-center gap-2">
+                             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <Icons.Database /> ฐานข้อมูล ({savedContractors.length})
+                            </h2>
+                            <button onClick={downloadCSV} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs ml-4 shadow">
+                                <Icons.Download /> Export CSV
+                            </button>
+                        </div>
+                        <div className="relative w-full sm:w-64">
+                            <div className="absolute left-3 top-2.5 text-gray-400"><Icons.Search /></div>
+                            <input type="text" placeholder="ค้นหา..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border rounded-full focus:ring-2 focus:ring-blue-500 outline-none text-sm"/>
+                        </div>
+                        </div>
+                        <div className="overflow-x-auto max-h-[500px]">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
+                            <tr><th className="p-4 border-b">ID</th><th className="p-4 border-b">ชื่อ</th><th className="p-4 border-b">บริษัท</th><th className="p-4 border-b text-center">Skills</th><th className="p-4 border-b text-center">จัดการ</th></tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                            {filteredList.length > 0 ? filteredList.map((doc) => (
+                                <tr key={doc.id} className="hover:bg-blue-50 transition-colors group cursor-pointer" onClick={() => handleLoad(doc)}>
+                                <td className="p-4 font-mono font-bold text-blue-800">{doc.contractorData.idNumber}</td>
+                                <td className="p-4 font-medium">{doc.contractorData.fullName}</td>
+                                <td className="p-4 text-gray-600 text-sm">{doc.contractorData.company}</td>
+                                <td className="p-4 text-center"><span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-bold">{doc.skills.filter(s => s.active).length} วิชา</span></td>
+                                <td className="p-4 flex items-center justify-center gap-2">
+                                    <button onClick={(e) => handleDelete(doc.id, e)} className="text-gray-400 hover:text-red-600 transition p-1"><Icons.Trash /></button>
+                                </td>
+                                </tr>
+                            )) : <tr><td colSpan="5" className="p-8 text-center text-gray-400 italic">ไม่พบข้อมูล</td></tr>}
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+
+                    <div id="batch-print-container" style={{display:'none'}}>
+                         {batchPages.map((page, pageIndex) => (
+                            <div key={pageIndex} className="a4-page">
+                                {page.map((item) => (
+                                    <div key={item.id} className="card-in-batch">
+                                        <CardTemplate data={item.contractorData} skills={item.skills} logo={item.logo || defaultLogo} />
+                                    </div>
+                                ))}
+                            </div>
+                         ))}
+                    </div>
+
+                </div>
+            );
+        };
+
+        const CardTemplate = ({ data, skills, logo }) => {
+            return (
+                <div id="card-element" className="relative bg-white shadow-2xl overflow-hidden print:shadow-none print:m-0"
+                    style={{ width: '85.6mm', height: '54mm', position: 'relative' }}>
+                    <div className="absolute inset-0 bg-white z-0"><div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#2563eb_1px,transparent_1px)]" style={{backgroundSize: '8px 8px'}}></div></div>
+                    
+                    {/* Header: ลดความสูงลงเล็กน้อยเหลือ h-9 เพื่อให้ข้างล่างไม่เบียด */}
+                    <div className="absolute top-0 left-0 w-full h-9 bg-blue-900 z-10 flex items-center px-3 justify-between">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center overflow-hidden border border-blue-200">
+                                <img src={logo} alt="Logo" className="w-full h-full object-contain p-0.5" />
+                            </div>
+                            <div>
+                                <h2 className="text-white font-bold text-[10px] leading-tight">COMPANY TANK FARM</h2>
+                                <p className="text-blue-200 text-[6px] tracking-wider uppercase">Contractor Skill Authorization Card</p>
+                            </div>
+                        </div>
+                        <div className="text-right text-white">
+                            <div className="text-[12px] font-bold tracking-widest border-b border-blue-400/50 leading-none pb-0.5">PASSED</div>
+                        </div>
+                    </div>
+
+                    {/* Content: ปรับ top เป็น 9 (36px) และ bottom ให้มากขึ้น */}
+                    <div className="absolute top-9 left-0 w-full bottom-2 z-10 flex flex-col">
+                        <div className="flex border-b border-gray-200 bg-blue-50/50 px-2 py-1 items-center justify-between">
+                            <div className="w-[65%]">
+                                <h3 className="text-blue-900 font-bold text-[10px] truncate leading-tight">{data.fullName || 'ชื่อ-นามสกุล'}</h3>
+                                <p className="text-gray-600 text-[8px] truncate">{data.company || 'บริษัท'}</p>
+                            </div>
+                            <div className="w-[35%] text-right">
+                                <div className="bg-white border border-gray-300 rounded px-1 py-0.5 inline-block text-center min-w-[50px] mb-0.5">
+                                <p className="text-[6px] text-gray-400 uppercase leading-none">ID Number</p>
+                                <p className="text-[9px] font-bold text-blue-800 leading-none mt-0.5 font-mono">{data.idNumber || 'XXX-000'}</p>
+                                </div>
+                                <div className="flex justify-end gap-1">
+                                    <p className="text-[6px] text-gray-500 leading-none">Iss: {data.issueDate}</p>
+                                    <p className="text-[6px] text-red-500 font-bold leading-none">Exp: {data.expiryDate}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex-1 p-1 flex gap-1 items-start content-start">
+                            <div className="w-1/2 flex flex-col gap-px">
+                                {skills.slice(0, 5).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
+                            </div>
+                            <div className="w-1/2 flex flex-col gap-px">
+                                {skills.slice(5, 10).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="absolute bottom-0 w-full h-1.5 bg-orange-500 z-20"></div>
+                </div>
+            );
+        };
+
+        const SkillItem = ({ skill }) => {
+            const icon = getSkillIcon(skill.id);
+            if (!skill.active) {
+                return (
+                <div className="flex items-center gap-1 border-b border-gray-100 last:border-0 py-px opacity-30 grayscale min-h-[17px]">
+                    <div className="text-gray-400 scale-75">{icon}</div>
+                    <div className="flex-1 min-w-0"><div className="text-[6.5px] font-bold text-gray-400">{skill.label}</div></div>
+                </div>
+                );
+            }
+            return (
+                <div className="flex flex-col border-b border-gray-100 last:border-0 py-px bg-white min-h-[17px] justify-center">
+                <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1 min-w-0">
+                        <div className="text-blue-800 scale-75">{icon}</div>
+                        <div className="text-[6.5px] font-bold text-blue-900 truncate leading-none pt-0.5">{skill.label}</div>
+                    </div>
+                    {skill.expiry && <div className="text-[5px] text-gray-500 bg-gray-100 px-1 rounded-sm whitespace-nowrap scale-90 origin-right">Exp: {skill.expiry}</div>}
+                </div>
+                {skill.hasSubRoles && (
+                    <div className="flex flex-wrap gap-0.5 ml-4 mt-0.5">
+                    {skill.subRoles.filter(s => s.active).length > 0 ? 
+                        skill.subRoles.filter(s => s.active).map(sub => <span key={sub.id} className="text-[5px] bg-green-100 text-green-800 px-1 rounded-sm border border-green-200 leading-tight">{sub.label.split('(')[0]}</span>) : 
+                        <span className="text-[5px] text-red-400 italic px-1">- No Role Selected -</span>
+                    }
+                    </div>
+                )}
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
