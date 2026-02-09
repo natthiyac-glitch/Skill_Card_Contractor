@@ -113,6 +113,7 @@
             Edit: (props) => <IconBase {...props} size={14}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></IconBase>,
             AlertTriangle: (props) => <IconBase {...props} size={16}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></IconBase>,
             WifiOff: (props) => <IconBase {...props} size={14}><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></IconBase>,
+            FileSignature: (props) => <IconBase {...props} size={14}><path d="M20 19.5v.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8.5L20 7.5V20l-2-2h-3.5"/><polyline points="14 2 14 8 20 8"/><path d="M18.42 9.61a2.1 2.1 0 1 1 2.97 2.97L16.8 17.18a2.6 2.6 0 0 1-1 .69l-2.6.9 1.3-3.8a2.6 2.6 0 0 1 .69-1l4.23-4.23z"/></IconBase>,
             
             // Skill Icons
             Shield: (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></IconBase>,
@@ -159,9 +160,16 @@
                 expiryDate: nextYear.toISOString().split('T')[0],
             });
             
+            // Logo
             const [logo, setLogo] = useState(() => {
                 const savedLogo = localStorage.getItem('custom_logo');
                 return savedLogo || defaultLogo;
+            });
+
+            // Signature
+            const [signature, setSignature] = useState(() => {
+                const savedSig = localStorage.getItem('custom_signature');
+                return savedSig || null;
             });
 
             const [savedContractors, setSavedContractors] = useState([]);
@@ -195,7 +203,7 @@
                 ]},
                 { id: 'ptw', label: 'PTW Holder', active: false, expiry: '', hasSubRoles: false },
                 { id: 'radiation', label: 'Radiation', active: false, expiry: '', hasSubRoles: false },
-                { id: 'drive', label: 'Driver', active: false, expiry: '', hasSubRoles: false }, // ลบช้อย Driver ออกแล้ว
+                { id: 'drive', label: 'Driver', active: false, expiry: '', hasSubRoles: false },
             ];
 
             const [skills, setSkills] = useState(defaultSkills);
@@ -225,10 +233,30 @@
                 }
             };
 
+            const handleSignatureUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 2000000) { alert("ไฟล์ใหญ่เกินไป (ต้อง < 2MB)"); return; }
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setSignature(reader.result);
+                        try { localStorage.setItem('custom_signature', reader.result); } catch (err) {}
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
             const resetLogo = () => {
                 if(confirm("รีเซ็ตโลโก้?")) {
                     setLogo(defaultLogo);
                     localStorage.removeItem('custom_logo');
+                }
+            };
+
+            const resetSignature = () => {
+                if(confirm("ลบลายเซ็น?")) {
+                    setSignature(null);
+                    localStorage.removeItem('custom_signature');
                 }
             };
 
@@ -263,6 +291,7 @@
                      contractorData, 
                      skills, 
                      logo,
+                     signature, // Save signature with record
                      createdAt: new Date().toISOString()
                 };
                 
@@ -331,6 +360,7 @@
                 });
                 setSkills(mergedSkills);
                 setLogo(doc.logo || logo);
+                setSignature(doc.signature || signature);
                 setCurrentDocId(doc.id);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
@@ -355,7 +385,11 @@
                     expiryDate: nextYear.toISOString().split('T')[0] 
                 });
                 setSkills(defaultSkills);
+                
+                // Keep logo and signature from local storage settings
                 setLogo(localStorage.getItem('custom_logo') || defaultLogo);
+                setSignature(localStorage.getItem('custom_signature') || null);
+                
                 setCurrentDocId(null);
             };
 
@@ -403,6 +437,7 @@
                                 <Icons.User /> 1. ข้อมูลผู้รับเหมา {currentDocId && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded ml-auto">Editing Mode</span>}
                             </h2>
                             <div className="space-y-3 mb-6">
+                                {/* Logo Upload */}
                                 <div className="p-3 bg-blue-50 border border-blue-100 rounded mb-4 flex items-center gap-4">
                                     <div className="w-12 h-12 bg-white rounded-full border border-gray-200 p-1 flex-shrink-0">
                                         <img src={logo} className="w-full h-full object-contain"/>
@@ -418,6 +453,24 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Signature Upload (New) */}
+                                <div className="p-3 bg-gray-50 border border-gray-200 rounded mb-4 flex items-center gap-4">
+                                    <div className="w-12 h-8 bg-white border border-gray-300 p-1 flex items-center justify-center">
+                                        {signature ? <img src={signature} className="h-full object-contain"/> : <span className="text-[8px] text-gray-400">ลายเซ็น</span>}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-xs font-bold text-gray-700">ลายเซ็นผู้ตรวจสอบ</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <label className="cursor-pointer text-[10px] bg-white border px-2 py-1 rounded hover:bg-gray-100 flex items-center gap-1">
+                                                <Icons.FileSignature size={10} /> อัปโหลด
+                                                <input type="file" accept="image/*" onChange={handleSignatureUpload} className="hidden"/>
+                                            </label>
+                                            {signature && <button onClick={resetSignature} className="text-[10px] text-red-500 hover:underline">ลบ</button>}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div><label className="text-xs font-medium text-gray-500">ชื่อ-นามสกุล</label><input type="text" name="fullName" value={contractorData.fullName} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"/></div>
                                 <div><label className="text-xs font-medium text-gray-500">บริษัท</label><input type="text" name="company" value={contractorData.company} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"/></div>
                                 <div><label className="text-xs font-medium text-gray-500">ID Number</label><input type="text" name="idNumber" value={contractorData.idNumber} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono text-blue-800 font-bold"/></div>
@@ -457,7 +510,7 @@
 
                         <div className="w-full lg:w-7/12 flex flex-col items-center pt-5">
                             <p className="mb-4 text-gray-500 print:hidden text-sm flex items-center gap-2"><Icons.AlertTriangle /> ตัวอย่างบัตร (Live Preview)</p>
-                            <CardTemplate data={contractorData} skills={skills} logo={logo} />
+                            <CardTemplate data={contractorData} skills={skills} logo={logo} signature={signature} />
                         </div>
                     </div>
                     
@@ -503,7 +556,7 @@
                             <div key={pageIndex} className="a4-page">
                                 {page.map((item) => (
                                     <div key={item.id} className="card-in-batch">
-                                        <CardTemplate data={item.contractorData} skills={item.skills} logo={item.logo || defaultLogo} />
+                                        <CardTemplate data={item.contractorData} skills={item.skills} logo={item.logo || defaultLogo} signature={item.signature || signature} />
                                     </div>
                                 ))}
                             </div>
@@ -514,13 +567,13 @@
             );
         };
 
-        const CardTemplate = ({ data, skills, logo }) => {
+        const CardTemplate = ({ data, skills, logo, signature }) => {
             return (
                 <div id="card-element" className="relative bg-white shadow-2xl overflow-hidden print:shadow-none print:m-0"
                     style={{ width: '85.6mm', height: '54mm', position: 'relative' }}>
                     <div className="absolute inset-0 bg-white z-0"><div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#2563eb_1px,transparent_1px)]" style={{backgroundSize: '8px 8px'}}></div></div>
                     
-                    {/* Header: ลดความสูงลงเล็กน้อยเหลือ h-9 เพื่อให้ข้างล่างไม่เบียด */}
+                    {/* Header */}
                     <div className="absolute top-0 left-0 w-full h-9 bg-blue-900 z-10 flex items-center px-3 justify-between">
                         <div className="flex items-center gap-2">
                             <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center overflow-hidden border border-blue-200">
@@ -536,8 +589,8 @@
                         </div>
                     </div>
 
-                    {/* Content: ปรับ top เป็น 9 (36px) และ bottom ให้มากขึ้น */}
-                    <div className="absolute top-9 left-0 w-full bottom-2 z-10 flex flex-col">
+                    {/* Content */}
+                    <div className="absolute top-9 left-0 w-full h-[calc(100%-36px)] z-10 flex flex-col">
                         <div className="flex border-b border-gray-200 bg-blue-50/50 px-2 py-1 items-center justify-between">
                             <div className="w-[65%]">
                                 <h3 className="text-blue-900 font-bold text-[10px] truncate leading-tight">{data.fullName || 'ชื่อ-นามสกุล'}</h3>
@@ -554,12 +607,26 @@
                                 </div>
                             </div>
                         </div>
-                        <div className="flex-1 p-1 flex gap-1 items-start content-start">
+                        
+                        {/* Skill Grid - with padding bottom for footer */}
+                        <div className="flex-1 p-1 pb-5 flex gap-1 items-start content-start">
                             <div className="w-1/2 flex flex-col gap-px">
                                 {skills.slice(0, 5).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
                             </div>
                             <div className="w-1/2 flex flex-col gap-px">
                                 {skills.slice(5, 10).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
+                            </div>
+                        </div>
+
+                        {/* Footer (Signature) - Positioned at bottom RIGHT */}
+                        <div className="absolute bottom-2 right-1 flex flex-col items-end">
+                            <div className="flex items-center gap-1">
+                                <span className="text-[5px] font-bold text-gray-500">ตรวจสอบ/ออกบัตรโดย:</span>
+                                {signature ? (
+                                    <img src={signature} className="h-3 max-w-[40px] object-contain" alt="Sig" />
+                                ) : (
+                                    <div className="h-3 w-10 border-b border-dotted border-gray-400"></div>
+                                )}
                             </div>
                         </div>
                     </div>
