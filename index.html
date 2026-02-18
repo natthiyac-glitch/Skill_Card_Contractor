@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contractor Skill Card System</title>
+    <title>Contractor Skill Card System (Thai Date)</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. React & ReactDOM (UMD) -->
+    <!-- 2. React & ReactDOM (UMD - เสถียรที่สุด) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
@@ -143,6 +143,18 @@
                 case 'drive': return <Icons.Truck size={14}/>;
                 default: return <Icons.User size={14}/>;
             }
+        };
+
+        // --- Helper: Format Date to Thai ---
+        const formatDateToThai = (dateString) => {
+            if (!dateString) return "";
+            const parts = dateString.split('-');
+            if (parts.length !== 3) return dateString;
+            // parts[0] = year, parts[1] = month, parts[2] = day
+            const year = parseInt(parts[0]) + 543;
+            const month = parts[1];
+            const day = parts[2];
+            return `${day}/${month}/${year}`; // DD/MM/YYYY (B.E.)
         };
 
         const defaultLogo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%231e3a8a' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M30 70 L30 40 L50 20 L70 40 L70 70 Z' fill='%23fff'/%3E%3Cpath d='M40 70 L40 50 L60 50 L60 70' fill='%231e3a8a'/%3E%3Ctext x='50' y='90' font-family='Arial' font-size='10' fill='white' text-anchor='middle' font-weight='bold'%3ETANK FARM%3C/text%3E%3C/svg%3E";
@@ -291,7 +303,7 @@
                      contractorData, 
                      skills, 
                      logo,
-                     signature, // Save signature with record
+                     signature,
                      createdAt: new Date().toISOString()
                 };
                 
@@ -328,10 +340,10 @@
                             const roles = s.subRoles.filter(sr => sr.active).map(sr => sr.label).join('/');
                             if(roles) role += ` (${roles})`;
                         }
-                        if(s.expiry) role += ` [Exp:${s.expiry}]`;
+                        if(s.expiry) role += ` [Exp:${formatDateToThai(s.expiry)}]`;
                         return role;
                     }).join(' | ');
-                    return [`"${c.contractorData.idNumber}"`, `"${c.contractorData.fullName}"`, `"${c.contractorData.company}"`, `"${c.contractorData.issueDate}"`, `"${c.contractorData.expiryDate}"`, `"${skillDetails}"`];
+                    return [`"${c.contractorData.idNumber}"`, `"${c.contractorData.fullName}"`, `"${c.contractorData.company}"`, `"${formatDateToThai(c.contractorData.issueDate)}"`, `"${formatDateToThai(c.contractorData.expiryDate)}"`, `"${skillDetails}"`];
                 });
                 const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -385,11 +397,8 @@
                     expiryDate: nextYear.toISOString().split('T')[0] 
                 });
                 setSkills(defaultSkills);
-                
-                // Keep logo and signature from local storage settings
                 setLogo(localStorage.getItem('custom_logo') || defaultLogo);
                 setSignature(localStorage.getItem('custom_signature') || null);
-                
                 setCurrentDocId(null);
             };
 
@@ -454,7 +463,7 @@
                                     </div>
                                 </div>
 
-                                {/* Signature Upload (New) */}
+                                {/* Signature Upload */}
                                 <div className="p-3 bg-gray-50 border border-gray-200 rounded mb-4 flex items-center gap-4">
                                     <div className="w-12 h-8 bg-white border border-gray-300 p-1 flex items-center justify-center">
                                         {signature ? <img src={signature} className="h-full object-contain"/> : <span className="text-[8px] text-gray-400">ลายเซ็น</span>}
@@ -474,10 +483,18 @@
                                 <div><label className="text-xs font-medium text-gray-500">ชื่อ-นามสกุล</label><input type="text" name="fullName" value={contractorData.fullName} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"/></div>
                                 <div><label className="text-xs font-medium text-gray-500">บริษัท</label><input type="text" name="company" value={contractorData.company} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"/></div>
                                 <div><label className="text-xs font-medium text-gray-500">ID Number</label><input type="text" name="idNumber" value={contractorData.idNumber} onChange={handleInputChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none font-mono text-blue-800 font-bold"/></div>
+                                
                                 <div className="grid grid-cols-2 gap-2">
-                                    <div><label className="text-xs font-medium text-gray-500">วันที่ออกบัตร</label><input type="date" name="issueDate" value={contractorData.issueDate} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/></div>
-                                    <div><label className="text-xs font-medium text-gray-500">วันหมดอายุ</label><input type="date" name="expiryDate" value={contractorData.expiryDate} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/></div>
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-500 flex justify-between">วันที่ออกบัตร <span className="text-[10px] text-blue-500">(เลือก ค.ศ.)</span></label>
+                                        <input type="date" name="issueDate" value={contractorData.issueDate} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-medium text-gray-500 flex justify-between">วันหมดอายุ <span className="text-[10px] text-blue-500">(เลือก ค.ศ.)</span></label>
+                                        <input type="date" name="expiryDate" value={contractorData.expiryDate} onChange={handleInputChange} className="w-full p-2 border rounded text-sm"/>
+                                    </div>
                                 </div>
+                                <p className="text-[10px] text-gray-400 text-center">* เลือกวันที่ในปฏิทินเป็น ค.ศ. ระบบจะแสดงบนบัตรเป็น พ.ศ. ให้เอง</p>
                             </div>
                             
                             <h2 className="text-lg font-semibold mb-4 border-b pb-2 flex items-center gap-2 text-blue-900">
@@ -594,7 +611,7 @@
                         <div className="flex border-b border-gray-200 bg-blue-50/50 px-2 py-1 items-center justify-between">
                             <div className="w-[65%]">
                                 <h3 className="text-blue-900 font-bold text-[10px] truncate leading-tight">{data.fullName || 'ชื่อ-นามสกุล'}</h3>
-                                <p className="text-gray-600 text-[8px] font-bold truncate">{data.company || 'บริษัท'}</p>
+                                <p className="text-gray-900 text-[8px] font-bold truncate">{data.company || 'บริษัท'}</p>
                             </div>
                             <div className="w-[35%] text-right">
                                 <div className="bg-white border border-gray-300 rounded px-1 py-0.5 inline-block text-center min-w-[50px] mb-0.5">
@@ -602,8 +619,8 @@
                                 <p className="text-[9px] font-bold text-blue-800 leading-none mt-0.5 font-mono">{data.idNumber || 'XXX-000'}</p>
                                 </div>
                                 <div className="flex justify-end gap-1">
-                                    <p className="text-[6px] text-gray-500 leading-none">Iss: {data.issueDate}</p>
-                                    <p className="text-[6px] text-red-500 font-bold leading-none">Exp: {data.expiryDate}</p>
+                                    <p className="text-[6px] text-gray-500 leading-none">Iss: {formatDateToThai(data.issueDate)}</p>
+                                    <p className="text-[6px] text-red-500 font-bold leading-none">Exp: {formatDateToThai(data.expiryDate)}</p>
                                 </div>
                             </div>
                         </div>
@@ -652,7 +669,7 @@
                         <div className="text-blue-800 scale-75">{icon}</div>
                         <div className="text-[6.5px] font-bold text-blue-900 truncate leading-none pt-0.5">{skill.label}</div>
                     </div>
-                    {skill.expiry && <div className="text-[5px] text-gray-500 bg-gray-100 px-1 rounded-sm whitespace-nowrap scale-90 origin-right">Exp: {skill.expiry}</div>}
+                    {skill.expiry && <div className="text-[5px] text-gray-500 bg-gray-100 px-1 rounded-sm whitespace-nowrap scale-90 origin-right">Exp: {formatDateToThai(skill.expiry)}</div>}
                 </div>
                 {skill.hasSubRoles && (
                     <div className="flex flex-wrap gap-0.5 ml-4 mt-0.5">
