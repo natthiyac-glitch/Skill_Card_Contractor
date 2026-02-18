@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contractor Skill Card System (Thai Date)</title>
+    <title>Contractor Skill Card System (Balanced Layout)</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. React & ReactDOM (UMD - เสถียรที่สุด) -->
+    <!-- 2. React & ReactDOM (UMD) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
@@ -64,6 +64,7 @@
                 width: 190mm; 
                 height: 270mm;
                 page-break-after: always;
+                padding: 10px;
             }
             .card-in-batch {
                 transform: scale(1);
@@ -93,7 +94,7 @@
         const { useState, useEffect } = React;
         const { createRoot } = ReactDOM;
 
-        // --- ICONS ---
+        // --- ICONS (SVG Inline) ---
         const IconBase = ({ children, size = 14, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {children}
@@ -131,30 +132,28 @@
 
         const getSkillIcon = (id) => {
             switch(id) {
-                case 'confine': return <Icons.Shield size={14}/>;
-                case 'firewatch': return <Icons.Flame size={14}/>;
-                case 'electrical': return <Icons.Zap size={14}/>;
-                case 'safety': return <Icons.HardHat size={14}/>;
-                case 'scaffold': return <Icons.Construction size={14}/>;
-                case 'height': return <Icons.ArrowUp size={14}/>;
-                case 'crane': return <Icons.Anchor size={14}/>;
-                case 'ptw': return <Icons.FileText size={14}/>;
-                case 'radiation': return <Icons.Radio size={14}/>;
-                case 'drive': return <Icons.Truck size={14}/>;
-                default: return <Icons.User size={14}/>;
+                case 'confine': return <Icons.Shield size={16}/>;
+                case 'firewatch': return <Icons.Flame size={16}/>;
+                case 'electrical': return <Icons.Zap size={16}/>;
+                case 'safety': return <Icons.HardHat size={16}/>;
+                case 'scaffold': return <Icons.Construction size={16}/>;
+                case 'height': return <Icons.ArrowUp size={16}/>;
+                case 'crane': return <Icons.Anchor size={16}/>;
+                case 'ptw': return <Icons.FileText size={16}/>;
+                case 'radiation': return <Icons.Radio size={16}/>;
+                case 'drive': return <Icons.Truck size={16}/>;
+                default: return <Icons.User size={16}/>;
             }
         };
 
-        // --- Helper: Format Date to Thai ---
         const formatDateToThai = (dateString) => {
             if (!dateString) return "";
             const parts = dateString.split('-');
             if (parts.length !== 3) return dateString;
-            // parts[0] = year, parts[1] = month, parts[2] = day
             const year = parseInt(parts[0]) + 543;
             const month = parts[1];
             const day = parts[2];
-            return `${day}/${month}/${year}`; // DD/MM/YYYY (B.E.)
+            return `${day}/${month}/${year}`;
         };
 
         const defaultLogo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%231e3a8a' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M30 70 L30 40 L50 20 L70 40 L70 70 Z' fill='%23fff'/%3E%3Cpath d='M40 70 L40 50 L60 50 L60 70' fill='%231e3a8a'/%3E%3Ctext x='50' y='90' font-family='Arial' font-size='10' fill='white' text-anchor='middle' font-weight='bold'%3ETANK FARM%3C/text%3E%3C/svg%3E";
@@ -172,13 +171,11 @@
                 expiryDate: nextYear.toISOString().split('T')[0],
             });
             
-            // Logo
             const [logo, setLogo] = useState(() => {
                 const savedLogo = localStorage.getItem('custom_logo');
                 return savedLogo || defaultLogo;
             });
 
-            // Signature
             const [signature, setSignature] = useState(() => {
                 const savedSig = localStorage.getItem('custom_signature');
                 return savedSig || null;
@@ -190,10 +187,10 @@
             
             const defaultSkills = [
                 { id: 'confine', label: 'Confined Space', active: false, expiry: '', hasSubRoles: true, subRoles: [
-                    { id: 'sup', label: 'ผู้ควบคุม (Sup)', active: false },
-                    { id: 'helper', label: 'ผู้ช่วยเหลือ (Helper)', active: false },
-                    { id: 'worker', label: 'ผู้ปฏิบัติงาน (Worker)', active: false },
-                    { id: 'observer', label: 'ผู้สังเกตการณ์ (Obs)', active: false },
+                    { id: 'sup', label: 'Controller', active: false },
+                    { id: 'helper', label: 'Rescuer', active: false },
+                    { id: 'worker', label: 'Operator', active: false },
+                    { id: 'observer', label: 'Hole Watch', active: false },
                 ]},
                 { id: 'firewatch', label: 'Fire Watch', active: false, expiry: '', hasSubRoles: false },
                 { id: 'electrical', label: 'Electrical Tech', active: false, expiry: '', hasSubRoles: false },
@@ -598,7 +595,7 @@
                             </div>
                             <div>
                                 <h2 className="text-white font-bold text-[10px] leading-tight">Thai Tank Terminal Co., Ltd</h2>
-                                <p className="text-blue-200 text-[6px] tracking-wider uppercase">Contractor Skill Authorization Card</p>
+                                <p className="text-blue-200 text-[7px] tracking-wider uppercase">Contractor Skill Authorization Card</p>
                             </div>
                         </div>
                         <div className="text-right text-white">
@@ -609,18 +606,18 @@
                     {/* Content */}
                     <div className="absolute top-9 left-0 w-full h-[calc(100%-36px)] z-10 flex flex-col">
                         <div className="flex border-b border-gray-200 bg-blue-50/50 px-2 py-1 items-center justify-between">
-                            <div className="w-[65%]">
+                            <div className="w-[55%]">
                                 <h3 className="text-blue-900 font-bold text-[10px] truncate leading-tight">{data.fullName || 'ชื่อ-นามสกุล'}</h3>
-                                <p className="text-gray-900 text-[8px] font-bold truncate">{data.company || 'บริษัท'}</p>
+                                <p className="text-gray-600 text-[8px] font-bold truncate">{data.company || 'บริษัท'}</p>
                             </div>
-                            <div className="w-[35%] text-right">
+                            <div className="w-[45%] text-right ml-auto flex flex-col items-end">
                                 <div className="bg-white border border-gray-300 rounded px-1 py-0.5 inline-block text-center min-w-[50px] mb-0.5">
                                 <p className="text-[6px] text-gray-400 uppercase leading-none">ID Number</p>
                                 <p className="text-[9px] font-bold text-blue-800 leading-none mt-0.5 font-mono">{data.idNumber || 'XXX-000'}</p>
                                 </div>
-                                <div className="flex justify-end gap-1">
-                                    <p className="text-[6px] text-gray-500 leading-none">Iss: {formatDateToThai(data.issueDate)}</p>
-                                    <p className="text-[6px] text-red-500 font-bold leading-none">Exp: {formatDateToThai(data.expiryDate)}</p>
+                                <div className="flex justify-end gap-1 whitespace-nowrap">
+                                    <p className="text-[7px] text-red-600 font-bold leading-none">Iss: {formatDateToThai(data.issueDate)}</p>
+                                    <p className="text-[7px] text-red-600 font-extrabold leading-none">Exp: {formatDateToThai(data.expiryDate)}</p>
                                 </div>
                             </div>
                         </div>
@@ -669,7 +666,8 @@
                         <div className="text-blue-800 scale-75">{icon}</div>
                         <div className="text-[6.5px] font-bold text-blue-900 truncate leading-none pt-0.5">{skill.label}</div>
                     </div>
-                    {skill.expiry && <div className="text-[5px] text-gray-500 bg-gray-100 px-1 rounded-sm whitespace-nowrap scale-90 origin-right">Exp: {formatDateToThai(skill.expiry)}</div>}
+                    {/* ปรับขนาดวันที่ Skill ให้ใหญ่ขึ้นเป็น 7px และลบ scale-90 ออก */}
+                    {skill.expiry && <div className="text-[7px] text-red-600 font-bold bg-gray-50 px-1 rounded-sm whitespace-nowrap origin-right">Exp: {formatDateToThai(skill.expiry)}</div>}
                 </div>
                 {skill.hasSubRoles && (
                     <div className="flex flex-wrap gap-0.5 ml-4 mt-0.5">
