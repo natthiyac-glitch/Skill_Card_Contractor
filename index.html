@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contractor Skill Card System (Balanced Layout)</title>
+    <title>Contractor Skill Card System (Reverted)</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -130,19 +130,19 @@
             CheckSquare: (props) => <IconBase {...props} size={20}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></IconBase>,
         };
 
-        const getSkillIcon = (id) => {
+        const getSkillIcon = (id, s = 16) => {
             switch(id) {
-                case 'confine': return <Icons.Shield size={16}/>;
-                case 'firewatch': return <Icons.Flame size={16}/>;
-                case 'electrical': return <Icons.Zap size={16}/>;
-                case 'safety': return <Icons.HardHat size={16}/>;
-                case 'scaffold': return <Icons.Construction size={16}/>;
-                case 'height': return <Icons.ArrowUp size={16}/>;
-                case 'crane': return <Icons.Anchor size={16}/>;
-                case 'ptw': return <Icons.FileText size={16}/>;
-                case 'radiation': return <Icons.Radio size={16}/>;
-                case 'drive': return <Icons.Truck size={16}/>;
-                default: return <Icons.User size={16}/>;
+                case 'confine': return <Icons.Shield size={s}/>;
+                case 'firewatch': return <Icons.Flame size={s}/>;
+                case 'electrical': return <Icons.Zap size={s}/>;
+                case 'safety': return <Icons.HardHat size={s}/>;
+                case 'scaffold': return <Icons.Construction size={s}/>;
+                case 'height': return <Icons.ArrowUp size={s}/>;
+                case 'crane': return <Icons.Anchor size={s}/>;
+                case 'ptw': return <Icons.FileText size={s}/>;
+                case 'radiation': return <Icons.Radio size={s}/>;
+                case 'drive': return <Icons.Truck size={s}/>;
+                default: return <Icons.User size={s}/>;
             }
         };
 
@@ -185,34 +185,35 @@
             const [currentDocId, setCurrentDocId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
             
+            // เพิ่มการตั้งค่า RequireExpiry และ ShowPass
             const defaultSkills = [
-                { id: 'confine', label: 'Confined Space', active: false, expiry: '', hasSubRoles: true, subRoles: [
+                { id: 'confine', label: 'Confined Space', active: false, expiry: '', hasSubRoles: true, requireExpiry: true, showPass: false, subRoles: [
                     { id: 'sup', label: 'Controller', active: false },
                     { id: 'helper', label: 'Rescuer', active: false },
                     { id: 'worker', label: 'Operator', active: false },
                     { id: 'observer', label: 'Hole Watch', active: false },
                 ]},
-                { id: 'firewatch', label: 'Fire Watch', active: false, expiry: '', hasSubRoles: false },
-                { id: 'electrical', label: 'Electrical Tech', active: false, expiry: '', hasSubRoles: false },
-                { id: 'safety', label: 'Safety', active: false, expiry: '', hasSubRoles: true, subRoles: [
+                { id: 'firewatch', label: 'Fire Watch', active: false, expiry: '', hasSubRoles: false, requireExpiry: false, showPass: true },
+                { id: 'electrical', label: 'Electrical Tech', active: false, expiry: '', hasSubRoles: false, requireExpiry: false, showPass: true },
+                { id: 'safety', label: 'Safety', active: false, expiry: '', hasSubRoles: true, requireExpiry: true, showPass: false, subRoles: [
                     { id: 'sup', label: 'Sup', active: false },
                     { id: 'tech', label: 'Tech', active: false },
                     { id: 'officer', label: 'Officer', active: false },
                 ]},
-                { id: 'scaffold', label: 'Scaffold', active: false, expiry: '', hasSubRoles: true, subRoles: [
+                { id: 'scaffold', label: 'Scaffold', active: false, expiry: '', hasSubRoles: true, requireExpiry: true, showPass: false, subRoles: [
                     { id: 'install', label: 'Installation', active: false },
                     { id: 'inspect', label: 'Inspector', active: false },
                 ]},
-                { id: 'height', label: 'Work at Height', active: false, expiry: '', hasSubRoles: false },
-                { id: 'crane', label: 'Crane', active: false, expiry: '', hasSubRoles: true, subRoles: [
+                { id: 'height', label: 'Work at Height', active: false, expiry: '', hasSubRoles: false, requireExpiry: false, showPass: true },
+                { id: 'crane', label: 'Crane', active: false, expiry: '', hasSubRoles: true, requireExpiry: true, showPass: false, subRoles: [
                     { id: 'rigger', label: 'Rigger', active: false },
                     { id: 'signaler', label: 'Signaler', active: false },
                     { id: 'opt', label: 'Operator (OPT)', active: false },
                     { id: 'ct', label: 'Controller (CT)', active: false },
                 ]},
-                { id: 'ptw', label: 'PTW Holder', active: false, expiry: '', hasSubRoles: false },
-                { id: 'radiation', label: 'Radiation', active: false, expiry: '', hasSubRoles: false },
-                { id: 'drive', label: 'Driver', active: false, expiry: '', hasSubRoles: false },
+                { id: 'ptw', label: 'PTW Holder', active: false, expiry: '', hasSubRoles: false, requireExpiry: false, showPass: true },
+                { id: 'radiation', label: 'Radiation', active: false, expiry: '', hasSubRoles: false, requireExpiry: false, showPass: true },
+                { id: 'drive', label: 'Driver', active: false, expiry: '', hasSubRoles: false, requireExpiry: true, showPass: true }, 
             ];
 
             const [skills, setSkills] = useState(defaultSkills);
@@ -337,7 +338,8 @@
                             const roles = s.subRoles.filter(sr => sr.active).map(sr => sr.label).join('/');
                             if(roles) role += ` (${roles})`;
                         }
-                        if(s.expiry) role += ` [Exp:${formatDateToThai(s.expiry)}]`;
+                        if(s.showPass) role += ` [Pass]`;
+                        if(s.requireExpiry !== false && s.expiry) role += ` [Exp:${formatDateToThai(s.expiry)}]`;
                         return role;
                     }).join(' | ');
                     return [`"${c.contractorData.idNumber}"`, `"${c.contractorData.fullName}"`, `"${c.contractorData.company}"`, `"${formatDateToThai(c.contractorData.issueDate)}"`, `"${formatDateToThai(c.contractorData.expiryDate)}"`, `"${skillDetails}"`];
@@ -501,11 +503,18 @@
                                 {skills.map((skill) => (
                                 <div key={skill.id} className={`border rounded p-3 transition-colors shadow-sm ${skill.active ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}>
                                     <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <input type="checkbox" checked={skill.active} onChange={(e) => toggleSkill(skill.id, e.target.checked)} className="w-5 h-5 accent-blue-600 rounded cursor-pointer"/>
-                                        <div className="flex items-center gap-2 font-bold text-gray-800"><span className="text-blue-600">{getSkillIcon(skill.id)}</span>{skill.label}</div>
-                                    </div>
-                                    <div><input type="date" value={skill.expiry} onChange={(e) => updateSkillExpiry(skill.id, e.target.value)} className={`text-xs border rounded p-1 ${!skill.active && 'opacity-50 bg-gray-100'}`} disabled={!skill.active}/></div>
+                                        <div className="flex items-center gap-2">
+                                            <input type="checkbox" checked={skill.active} onChange={(e) => toggleSkill(skill.id, e.target.checked)} className="w-5 h-5 accent-blue-600 rounded cursor-pointer"/>
+                                            <div className="flex items-center gap-2 font-bold text-gray-800"><span className="text-blue-600">{getSkillIcon(skill.id)}</span>{skill.label}</div>
+                                        </div>
+                                        
+                                        {/* Input Box Logic (hide date for Pass only) */}
+                                        <div className="flex items-center gap-2">
+                                            {skill.showPass && skill.active && <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded">PASS</span>}
+                                            {skill.requireExpiry !== false && (
+                                                <input type="date" value={skill.expiry} onChange={(e) => updateSkillExpiry(skill.id, e.target.value)} className={`text-xs border rounded p-1 ${!skill.active && 'opacity-50 bg-gray-100'}`} disabled={!skill.active}/>
+                                            )}
+                                        </div>
                                     </div>
                                     {skill.hasSubRoles && skill.active && (
                                     <div className="ml-7 grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 p-2 bg-white/50 rounded border border-blue-100/50">
@@ -622,7 +631,7 @@
                             </div>
                         </div>
                         
-                        {/* Skill Grid - with padding bottom for footer */}
+                        {/* Skill Grid */}
                         <div className="flex-1 p-1 pb-5 flex gap-1 items-start content-start">
                             <div className="w-1/2 flex flex-col gap-px">
                                 {skills.slice(0, 5).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
@@ -632,7 +641,7 @@
                             </div>
                         </div>
 
-                        {/* Footer (Signature) - Positioned at bottom RIGHT */}
+                        {/* Footer (Signature) */}
                         <div className="absolute bottom-2 right-1 flex flex-col items-end">
                             <div className="flex items-center gap-1">
                                 <span className="text-[5px] font-bold text-gray-500">ตรวจสอบ/ออกบัตรโดย:</span>
@@ -650,12 +659,12 @@
         };
 
         const SkillItem = ({ skill }) => {
-            const icon = getSkillIcon(skill.id);
+            const icon = getSkillIcon(skill.id, 10);
             if (!skill.active) {
                 return (
                 <div className="flex items-center gap-1 border-b border-gray-100 last:border-0 py-px opacity-30 grayscale min-h-[17px]">
-                    <div className="text-gray-400 scale-75">{icon}</div>
-                    <div className="flex-1 min-w-0"><div className="text-[6.5px] font-bold text-gray-400">{skill.label}</div></div>
+                    <div className="text-gray-400 flex-shrink-0">{icon}</div>
+                    <div className="flex-1 min-w-0"><div className="text-[7px] font-bold text-gray-400">{skill.label}</div></div>
                 </div>
                 );
             }
@@ -663,17 +672,23 @@
                 <div className="flex flex-col border-b border-gray-100 last:border-0 py-px bg-white min-h-[17px] justify-center">
                 <div className="flex items-center justify-between gap-1">
                     <div className="flex items-center gap-1 min-w-0">
-                        <div className="text-blue-800 scale-75">{icon}</div>
-                        <div className="text-[6.5px] font-bold text-blue-900 truncate leading-none pt-0.5">{skill.label}</div>
+                        <div className="text-blue-800 flex-shrink-0">{icon}</div>
+                        <div className="text-[7px] font-bold text-blue-900 truncate leading-none pt-0.5">{skill.label}</div>
                     </div>
-                    {/* ปรับขนาดวันที่ Skill ให้ใหญ่ขึ้นเป็น 7px และลบ scale-90 ออก */}
-                    {skill.expiry && <div className="text-[7px] text-red-600 font-bold bg-gray-50 px-1 rounded-sm whitespace-nowrap origin-right">Exp: {formatDateToThai(skill.expiry)}</div>}
+                    
+                    {/* Expiry and Pass Render logic */}
+                    <div className="flex items-center gap-0.5 whitespace-nowrap justify-end">
+                        {skill.showPass && <div className="text-[6px] text-green-600 px-1">pass</div>}
+                        {skill.requireExpiry !== false && skill.expiry && (
+                            <div className="text-[6px] text-red-600 font-bold bg-gray-50 px-1 rounded-sm origin-right">Exp: {formatDateToThai(skill.expiry)}</div>
+                        )}
+                    </div>
                 </div>
                 {skill.hasSubRoles && (
-                    <div className="flex flex-wrap gap-0.5 ml-4 mt-0.5">
+                    <div className="flex flex-wrap gap-[1.5px] ml-[13px] mt-0.5">
                     {skill.subRoles.filter(s => s.active).length > 0 ? 
-                        skill.subRoles.filter(s => s.active).map(sub => <span key={sub.id} className="text-[5px] bg-green-100 text-green-800 px-1 rounded-sm border border-green-200 leading-tight">{sub.label.split('(')[0]}</span>) : 
-                        <span className="text-[5px] text-red-400 italic px-1">- No Role Selected -</span>
+                        skill.subRoles.filter(s => s.active).map(sub => <span key={sub.id} className="text-[5.5px] whitespace-nowrap bg-green-100 text-green-800 px-[3px] py-[1px] rounded-[2px] border border-green-200 leading-none">{sub.label.split('(')[0].trim()}</span>) : 
+                        <span className="text-[5.5px] text-red-400 italic px-[3px]">- No Role Selected -</span>
                     }
                     </div>
                 )}
