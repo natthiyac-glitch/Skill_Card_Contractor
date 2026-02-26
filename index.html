@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contractor Skill Card System (Reverted)</title>
+    <title>Contractor Skill Card System (Balanced Layout)</title>
     
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -28,20 +28,21 @@
             }
             body * { visibility: hidden; }
             
-            .print-single-mode #card-element, .print-single-mode #card-element * { 
+            /* โหมดพิมพ์ใบเดียว */
+            .print-single-mode #card-wrapper, .print-single-mode #card-wrapper * { 
                 visibility: visible; 
             }
-            .print-single-mode #card-element {
+            .print-single-mode #card-wrapper {
                 position: absolute;
                 left: 50%;
                 top: 50%;
                 transform: translate(-50%, -50%) !important;
                 margin: 0;
-                border: 1px solid #ddd;
                 visibility: visible;
                 page-break-after: always;
             }
 
+            /* โหมดพิมพ์หลายใบ */
             .print-batch-mode #batch-print-container, .print-batch-mode #batch-print-container * {
                 visibility: visible;
             }
@@ -67,8 +68,6 @@
                 padding: 10px;
             }
             .card-in-batch {
-                transform: scale(1);
-                border: 1px dashed #ccc;
                 margin: auto;
                 page-break-inside: avoid;
             }
@@ -130,19 +129,19 @@
             CheckSquare: (props) => <IconBase {...props} size={20}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></IconBase>,
         };
 
-        const getSkillIcon = (id, s = 16) => {
+        const getSkillIcon = (id, size = 14) => {
             switch(id) {
-                case 'confine': return <Icons.Shield size={s}/>;
-                case 'firewatch': return <Icons.Flame size={s}/>;
-                case 'electrical': return <Icons.Zap size={s}/>;
-                case 'safety': return <Icons.HardHat size={s}/>;
-                case 'scaffold': return <Icons.Construction size={s}/>;
-                case 'height': return <Icons.ArrowUp size={s}/>;
-                case 'crane': return <Icons.Anchor size={s}/>;
-                case 'ptw': return <Icons.FileText size={s}/>;
-                case 'radiation': return <Icons.Radio size={s}/>;
-                case 'drive': return <Icons.Truck size={s}/>;
-                default: return <Icons.User size={s}/>;
+                case 'confine': return <Icons.Shield size={size}/>;
+                case 'firewatch': return <Icons.Flame size={size}/>;
+                case 'electrical': return <Icons.Zap size={size}/>;
+                case 'safety': return <Icons.HardHat size={size}/>;
+                case 'scaffold': return <Icons.Construction size={size}/>;
+                case 'height': return <Icons.ArrowUp size={size}/>;
+                case 'crane': return <Icons.Anchor size={size}/>;
+                case 'ptw': return <Icons.FileText size={size}/>;
+                case 'radiation': return <Icons.Radio size={size}/>;
+                case 'drive': return <Icons.Truck size={size}/>;
+                default: return <Icons.User size={size}/>;
             }
         };
 
@@ -184,7 +183,6 @@
             const [savedContractors, setSavedContractors] = useState([]);
             const [currentDocId, setCurrentDocId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
-            const [selectedIds, setSelectedIds] = useState([]); // เพิ่ม State สำหรับเก็บรายการที่เลือก
             
             // เพิ่มการตั้งค่า RequireExpiry และ ShowPass
             const defaultSkills = [
@@ -214,7 +212,7 @@
                 ]},
                 { id: 'ptw', label: 'PTW Holder', active: false, expiry: '', hasSubRoles: false, requireExpiry: false, showPass: true },
                 { id: 'radiation', label: 'Radiation', active: false, expiry: '', hasSubRoles: false, requireExpiry: false, showPass: true },
-                { id: 'drive', label: 'Driver', active: false, expiry: '', hasSubRoles: false, requireExpiry: true, showPass: true }, 
+                { id: 'drive', label: 'Driver', active: false, expiry: '', hasSubRoles: false, requireExpiry: true, showPass: true }, // ต้องการทั้ง 2 อย่าง
             ];
 
             const [skills, setSkills] = useState(defaultSkills);
@@ -282,12 +280,6 @@
                 }));
             };
 
-            const handlePrintSingle = () => {
-                document.body.classList.remove('print-batch-mode');
-                document.body.classList.add('print-single-mode');
-                setTimeout(() => window.print(), 100);
-            };
-
             const handlePrintBatch = () => {
                 if (savedContractors.length === 0) { alert('ไม่มีข้อมูล'); return; }
                 document.body.classList.remove('print-single-mode');
@@ -327,30 +319,6 @@
                 setSavedContractors(updatedList);
                 localStorage.setItem('contractor_db', JSON.stringify(updatedList));
                 if(currentDocId === id) handleNewForm();
-            };
-
-            // ฟังก์ชันสำหรับ Bulk Delete (ลบหลายรายการ)
-            const handleSelectAll = (e) => {
-                if (e.target.checked) {
-                    setSelectedIds(filteredList.map(doc => doc.id));
-                } else {
-                    setSelectedIds([]);
-                }
-            };
-
-            const handleSelect = (id, e) => {
-                e.stopPropagation(); // กันไม่ให้ไปทริกเกอร์โหลดข้อมูล
-                setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-            };
-
-            const handleBulkDelete = () => {
-                if (selectedIds.length === 0) return;
-                if(!confirm(`ยืนยันการลบข้อมูลที่เลือกจำนวน ${selectedIds.length} รายการ?`)) return;
-                const updatedList = savedContractors.filter(item => !selectedIds.includes(item.id));
-                setSavedContractors(updatedList);
-                localStorage.setItem('contractor_db', JSON.stringify(updatedList));
-                setSelectedIds([]);
-                if (selectedIds.includes(currentDocId)) handleNewForm();
             };
 
             const downloadCSV = () => {
@@ -454,9 +422,6 @@
                             </button>
                             <button onClick={handleSave} className={`flex items-center gap-2 px-3 py-2 rounded shadow transition text-sm text-white ${currentDocId ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}>
                                 <Icons.Save /> {currentDocId ? 'บันทึกแก้ไข' : 'บันทึก'}
-                            </button>
-                            <button onClick={handlePrintSingle} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded shadow transition text-sm">
-                                <Icons.Printer /> พิมพ์ใบนี้
                             </button>
                             <button onClick={handlePrintBatch} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded shadow transition text-sm">
                                 <Icons.Layers /> พิมพ์ A4 (8 ใบ)
@@ -568,13 +533,7 @@
                              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                 <Icons.Database /> ฐานข้อมูล ({savedContractors.length})
                             </h2>
-                            {/* ปุ่มลบที่เลือก จะโชว์เมื่อมีการติ๊กถูกเท่านั้น */}
-                            {selectedIds.length > 0 && (
-                                <button onClick={handleBulkDelete} className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs ml-2 shadow">
-                                    <Icons.Trash /> ลบที่เลือก ({selectedIds.length})
-                                </button>
-                            )}
-                            <button onClick={downloadCSV} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs ml-2 shadow">
+                            <button onClick={downloadCSV} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs ml-4 shadow">
                                 <Icons.Download /> Export CSV
                             </button>
                         </div>
@@ -586,19 +545,11 @@
                         <div className="overflow-x-auto max-h-[500px]">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
-                            <tr>
-                                <th className="p-4 border-b w-10 text-center">
-                                    <input type="checkbox" onChange={handleSelectAll} checked={filteredList.length > 0 && selectedIds.length === filteredList.length} className="w-4 h-4 cursor-pointer accent-blue-600"/>
-                                </th>
-                                <th className="p-4 border-b">ID</th><th className="p-4 border-b">ชื่อ</th><th className="p-4 border-b">บริษัท</th><th className="p-4 border-b text-center">Skills</th><th className="p-4 border-b text-center">จัดการ</th>
-                            </tr>
+                            <tr><th className="p-4 border-b">ID</th><th className="p-4 border-b">ชื่อ</th><th className="p-4 border-b">บริษัท</th><th className="p-4 border-b text-center">Skills</th><th className="p-4 border-b text-center">จัดการ</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                             {filteredList.length > 0 ? filteredList.map((doc) => (
                                 <tr key={doc.id} className="hover:bg-blue-50 transition-colors group cursor-pointer" onClick={() => handleLoad(doc)}>
-                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                    <input type="checkbox" checked={selectedIds.includes(doc.id)} onChange={(e) => handleSelect(doc.id, e)} className="w-4 h-4 cursor-pointer accent-blue-600"/>
-                                </td>
                                 <td className="p-4 font-mono font-bold text-blue-800">{doc.contractorData.idNumber}</td>
                                 <td className="p-4 font-medium">{doc.contractorData.fullName}</td>
                                 <td className="p-4 text-gray-600 text-sm">{doc.contractorData.company}</td>
@@ -630,104 +581,112 @@
         };
 
         const CardTemplate = ({ data, skills, logo, signature }) => {
+            // ใช้เทคนิค 2x Render: วาดบัตรที่ขนาดใหญ่กว่าจริง 2 เท่า (647px x 408px)
+            // แล้วใช้ CSS transform: scale(0.5) เพื่อย่อลงมาให้เหลือขนาด 85.6mm x 54mm เท่าเดิม
+            // วิธีนี้จะแก้ปัญหา Minimum Font Size ของ Browser ที่บีบให้ตัวหนังสือล้นได้ 100%
             return (
-                <div id="card-element" className="relative bg-white shadow-2xl overflow-hidden print:shadow-none print:m-0"
-                    style={{ width: '85.6mm', height: '54mm', position: 'relative' }}>
-                    <div className="absolute inset-0 bg-white z-0"><div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#2563eb_1px,transparent_1px)]" style={{backgroundSize: '8px 8px'}}></div></div>
-                    
-                    {/* Header */}
-                    <div className="absolute top-0 left-0 w-full h-9 bg-blue-900 z-10 flex items-center px-3 justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center overflow-hidden border border-blue-200">
-                                <img src={logo} alt="Logo" className="w-full h-full object-contain p-0.5" />
-                            </div>
-                            <div>
-                                <h2 className="text-white font-bold text-[10px] leading-tight">Thai Tank Terminal Co., Ltd</h2>
-                                <p className="text-blue-200 text-[7px] tracking-wider uppercase">Contractor Skill Authorization Card</p>
-                            </div>
-                        </div>
-                        <div className="text-right text-white">
-                            <div className="text-[12px] font-bold tracking-widest border-b border-blue-400/50 leading-none pb-0.5">PASSED</div>
-                        </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="absolute top-9 left-0 w-full h-[calc(100%-36px)] z-10 flex flex-col">
-                        <div className="flex border-b border-gray-200 bg-blue-50/50 px-2 py-1 items-center justify-between">
-                            <div className="w-[55%]">
-                                <h3 className="text-blue-900 font-bold text-[10px] truncate leading-tight">{data.fullName || 'ชื่อ-นามสกุล'}</h3>
-                                <p className="text-gray-600 text-[8px] font-bold truncate">{data.company || 'บริษัท'}</p>
-                            </div>
-                            <div className="w-[45%] text-right ml-auto flex flex-col items-end">
-                                <div className="bg-white border border-gray-300 rounded px-1 py-0.5 inline-block text-center min-w-[50px] mb-0.5">
-                                <p className="text-[6px] text-gray-400 uppercase leading-none">ID Number</p>
-                                <p className="text-[9px] font-bold text-blue-800 leading-none mt-0.5 font-mono">{data.idNumber || 'XXX-000'}</p>
-                                </div>
-                                <div className="flex justify-end gap-1 whitespace-nowrap">
-                                    <p className="text-[7px] text-red-600 font-bold leading-none">Iss: {formatDateToThai(data.issueDate)}</p>
-                                    <p className="text-[7px] text-red-600 font-extrabold leading-none">Exp: {formatDateToThai(data.expiryDate)}</p>
-                                </div>
-                            </div>
-                        </div>
+                <div id="card-wrapper" className="relative print:m-0"
+                    style={{ width: '85.6mm', height: '54mm' }}>
+                    <div id="card-element" className="absolute top-0 left-0 bg-white shadow-2xl overflow-hidden print:shadow-none print:border print:border-gray-300"
+                        style={{ width: '171.2mm', height: '108mm', transform: 'scale(0.5)', transformOrigin: 'top left' }}>
                         
-                        {/* Skill Grid */}
-                        <div className="flex-1 p-1 pb-5 flex gap-1 items-start content-start">
-                            <div className="w-1/2 flex flex-col gap-px">
-                                {skills.slice(0, 5).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
+                        {/* Background */}
+                        <div className="absolute inset-0 bg-white z-0"><div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#2563eb_2px,transparent_2px)]" style={{backgroundSize: '16px 16px'}}></div></div>
+                        
+                        {/* Header */}
+                        <div className="absolute top-0 left-0 w-full h-[72px] bg-blue-900 z-10 flex items-center px-6 justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-[56px] h-[56px] bg-white rounded-full flex items-center justify-center overflow-hidden border-[2px] border-blue-200">
+                                    <img src={logo} alt="Logo" className="w-full h-full object-contain p-1" />
+                                </div>
+                                <div>
+                                    <h2 className="text-white font-bold text-[20px] leading-tight">Thai Tank Terminal Co., Ltd</h2>
+                                    <p className="text-blue-200 text-[14px] tracking-wider uppercase mt-1">Contractor Skill Authorization Card</p>
+                                </div>
                             </div>
-                            <div className="w-1/2 flex flex-col gap-px">
-                                {skills.slice(5, 10).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
+                            <div className="text-right text-white">
+                                <div className="text-[24px] font-bold tracking-widest border-b-[2px] border-blue-400/50 leading-none pb-1">PASSED</div>
                             </div>
                         </div>
 
-                        {/* Footer (Signature) */}
-                        <div className="absolute bottom-2 right-1 flex flex-col items-end">
-                            <div className="flex items-center gap-1">
-                                <span className="text-[5px] font-bold text-gray-500">ตรวจสอบ/ออกบัตรโดย:</span>
-                                {signature ? (
-                                    <img src={signature} className="h-3 max-w-[40px] object-contain" alt="Sig" />
-                                ) : (
-                                    <div className="h-3 w-10 border-b border-dotted border-gray-400"></div>
-                                )}
+                        {/* Content */}
+                        <div className="absolute top-[72px] left-0 w-full h-[calc(100%-72px)] z-10 flex flex-col">
+                            <div className="flex border-b-[2px] border-gray-200 bg-blue-50/50 px-4 py-3 items-center justify-between">
+                                <div className="w-[55%]">
+                                    <h3 className="text-blue-900 font-bold text-[20px] truncate leading-tight">{data.fullName || 'ชื่อ-นามสกุล'}</h3>
+                                    <p className="text-gray-600 text-[16px] font-bold truncate mt-1">{data.company || 'บริษัท'}</p>
+                                </div>
+                                <div className="w-[45%] text-right ml-auto flex flex-col items-end">
+                                    <div className="bg-white border-[2px] border-gray-300 rounded px-2 py-1 inline-block text-center min-w-[100px] mb-1">
+                                    <p className="text-[12px] text-gray-400 uppercase leading-none">ID Number</p>
+                                    <p className="text-[18px] font-bold text-blue-800 leading-none mt-1 font-mono">{data.idNumber || 'XXX-000'}</p>
+                                    </div>
+                                    <div className="flex justify-end gap-2 whitespace-nowrap">
+                                        <p className="text-[14px] text-red-600 font-bold leading-none">Iss: {formatDateToThai(data.issueDate)}</p>
+                                        <p className="text-[14px] text-red-600 font-extrabold leading-none">Exp: {formatDateToThai(data.expiryDate)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Skill Grid */}
+                            <div className="flex-1 px-4 pt-2 pb-12 flex gap-4 overflow-hidden">
+                                <div className="w-1/2 flex flex-col gap-1">
+                                    {skills.slice(0, 5).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
+                                </div>
+                                <div className="w-1/2 flex flex-col gap-1">
+                                    {skills.slice(5, 10).map((skill) => <SkillItem key={skill.id} skill={skill} />)}
+                                </div>
+                            </div>
+
+                            {/* Footer (Signature) */}
+                            <div className="absolute bottom-4 right-2 flex flex-col items-end">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold text-gray-500">ตรวจสอบ/ออกบัตรโดย:</span>
+                                    {signature ? (
+                                        <img src={signature} className="h-6 max-w-[80px] object-contain" alt="Sig" />
+                                    ) : (
+                                        <div className="h-6 w-20 border-b-[2px] border-dotted border-gray-400"></div>
+                                    )}
+                                </div>
                             </div>
                         </div>
+                        <div className="absolute bottom-0 w-full h-3 bg-orange-500 z-20"></div>
                     </div>
-                    <div className="absolute bottom-0 w-full h-1.5 bg-orange-500 z-20"></div>
                 </div>
             );
         };
 
         const SkillItem = ({ skill }) => {
-            const icon = getSkillIcon(skill.id, 10);
+            const icon = getSkillIcon(skill.id, 28);
             if (!skill.active) {
                 return (
-                <div className="flex items-center gap-1 border-b border-gray-100 last:border-0 py-px opacity-30 grayscale min-h-[17px]">
-                    <div className="text-gray-400 flex-shrink-0">{icon}</div>
-                    <div className="flex-1 min-w-0"><div className="text-[7px] font-bold text-gray-400">{skill.label}</div></div>
+                <div className="flex items-center gap-2 border-b-[2px] border-gray-100 last:border-0 py-1 opacity-30 grayscale min-h-[34px]">
+                    <div className="text-gray-400">{icon}</div>
+                    <div className="flex-1 min-w-0"><div className="text-[14px] font-bold text-gray-400">{skill.label}</div></div>
                 </div>
                 );
             }
             return (
-                <div className="flex flex-col border-b border-gray-100 last:border-0 py-px bg-white min-h-[17px] justify-center">
-                <div className="flex items-center justify-between gap-1">
-                    <div className="flex items-center gap-1 min-w-0">
-                        <div className="text-blue-800 flex-shrink-0">{icon}</div>
-                        <div className="text-[7px] font-bold text-blue-900 truncate leading-none pt-0.5">{skill.label}</div>
+                <div className="flex flex-col border-b-[2px] border-gray-100 last:border-0 py-1 bg-white min-h-[34px] justify-center">
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <div className="text-blue-800">{icon}</div>
+                        <div className="text-[14px] font-bold text-blue-900 truncate leading-none pt-1">{skill.label}</div>
                     </div>
                     
                     {/* Expiry and Pass Render logic */}
-                    <div className="flex items-center gap-0.5 whitespace-nowrap justify-end">
-                        {skill.showPass && <div className="text-[6px] text-green-600 px-1">pass</div>}
+                    <div className="flex items-center gap-1 whitespace-nowrap justify-end">
+                        {skill.showPass && <div className="text-[14px] text-green-700 font-bold bg-green-100 px-2 py-1 rounded-[4px] border border-green-200">Pass</div>}
                         {skill.requireExpiry !== false && skill.expiry && (
-                            <div className="text-[6px] text-red-600 font-bold bg-gray-50 px-1 rounded-sm origin-right">Exp: {formatDateToThai(skill.expiry)}</div>
+                            <div className="text-[14px] text-red-600 font-bold bg-gray-50 px-2 py-1 rounded-[4px] origin-right">Exp: {formatDateToThai(skill.expiry)}</div>
                         )}
                     </div>
                 </div>
                 {skill.hasSubRoles && (
-                    <div className="flex flex-wrap gap-[1.5px] ml-[13px] mt-0.5">
+                    <div className="flex flex-wrap gap-[3px] ml-[36px] mt-1">
                     {skill.subRoles.filter(s => s.active).length > 0 ? 
-                        skill.subRoles.filter(s => s.active).map(sub => <span key={sub.id} className="text-[5.5px] whitespace-nowrap bg-green-100 text-green-800 px-[3px] py-[1px] rounded-[2px] border border-green-200 leading-none">{sub.label.split('(')[0].trim()}</span>) : 
-                        <span className="text-[5.5px] text-red-400 italic px-[3px]">- No Role Selected -</span>
+                        skill.subRoles.filter(s => s.active).map(sub => <span key={sub.id} className="text-[11px] whitespace-nowrap bg-green-100 text-green-800 px-[6px] py-[2px] rounded-[4px] border border-green-200 leading-none">{sub.label.split('(')[0].trim()}</span>) : 
+                        <span className="text-[11px] text-red-400 italic px-[6px]">- No Role Selected -</span>
                     }
                     </div>
                 )}
