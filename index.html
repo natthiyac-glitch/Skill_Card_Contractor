@@ -184,6 +184,7 @@
             const [savedContractors, setSavedContractors] = useState([]);
             const [currentDocId, setCurrentDocId] = useState(null);
             const [searchTerm, setSearchTerm] = useState('');
+            const [selectedIds, setSelectedIds] = useState([]); // เพิ่ม State สำหรับเก็บรายการที่เลือก
             
             // เพิ่มการตั้งค่า RequireExpiry และ ShowPass
             const defaultSkills = [
@@ -326,6 +327,30 @@
                 setSavedContractors(updatedList);
                 localStorage.setItem('contractor_db', JSON.stringify(updatedList));
                 if(currentDocId === id) handleNewForm();
+            };
+
+            // ฟังก์ชันสำหรับ Bulk Delete (ลบหลายรายการ)
+            const handleSelectAll = (e) => {
+                if (e.target.checked) {
+                    setSelectedIds(filteredList.map(doc => doc.id));
+                } else {
+                    setSelectedIds([]);
+                }
+            };
+
+            const handleSelect = (id, e) => {
+                e.stopPropagation(); // กันไม่ให้ไปทริกเกอร์โหลดข้อมูล
+                setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+            };
+
+            const handleBulkDelete = () => {
+                if (selectedIds.length === 0) return;
+                if(!confirm(`ยืนยันการลบข้อมูลที่เลือกจำนวน ${selectedIds.length} รายการ?`)) return;
+                const updatedList = savedContractors.filter(item => !selectedIds.includes(item.id));
+                setSavedContractors(updatedList);
+                localStorage.setItem('contractor_db', JSON.stringify(updatedList));
+                setSelectedIds([]);
+                if (selectedIds.includes(currentDocId)) handleNewForm();
             };
 
             const downloadCSV = () => {
@@ -543,7 +568,13 @@
                              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                 <Icons.Database /> ฐานข้อมูล ({savedContractors.length})
                             </h2>
-                            <button onClick={downloadCSV} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs ml-4 shadow">
+                            {/* ปุ่มลบที่เลือก จะโชว์เมื่อมีการติ๊กถูกเท่านั้น */}
+                            {selectedIds.length > 0 && (
+                                <button onClick={handleBulkDelete} className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs ml-2 shadow">
+                                    <Icons.Trash /> ลบที่เลือก ({selectedIds.length})
+                                </button>
+                            )}
+                            <button onClick={downloadCSV} className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs ml-2 shadow">
                                 <Icons.Download /> Export CSV
                             </button>
                         </div>
@@ -555,11 +586,19 @@
                         <div className="overflow-x-auto max-h-[500px]">
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-gray-100 text-gray-600 uppercase text-xs sticky top-0 z-10">
-                            <tr><th className="p-4 border-b">ID</th><th className="p-4 border-b">ชื่อ</th><th className="p-4 border-b">บริษัท</th><th className="p-4 border-b text-center">Skills</th><th className="p-4 border-b text-center">จัดการ</th></tr>
+                            <tr>
+                                <th className="p-4 border-b w-10 text-center">
+                                    <input type="checkbox" onChange={handleSelectAll} checked={filteredList.length > 0 && selectedIds.length === filteredList.length} className="w-4 h-4 cursor-pointer accent-blue-600"/>
+                                </th>
+                                <th className="p-4 border-b">ID</th><th className="p-4 border-b">ชื่อ</th><th className="p-4 border-b">บริษัท</th><th className="p-4 border-b text-center">Skills</th><th className="p-4 border-b text-center">จัดการ</th>
+                            </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                             {filteredList.length > 0 ? filteredList.map((doc) => (
                                 <tr key={doc.id} className="hover:bg-blue-50 transition-colors group cursor-pointer" onClick={() => handleLoad(doc)}>
+                                <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <input type="checkbox" checked={selectedIds.includes(doc.id)} onChange={(e) => handleSelect(doc.id, e)} className="w-4 h-4 cursor-pointer accent-blue-600"/>
+                                </td>
                                 <td className="p-4 font-mono font-bold text-blue-800">{doc.contractorData.idNumber}</td>
                                 <td className="p-4 font-medium">{doc.contractorData.fullName}</td>
                                 <td className="p-4 text-gray-600 text-sm">{doc.contractorData.company}</td>
